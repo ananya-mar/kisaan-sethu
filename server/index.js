@@ -8,24 +8,44 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// We don't need the API key for this test, so we can ignore this.
+// const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+console.log("Running in MOCK_API mode. No Gemini API key needed.");
 
-if (!GEMINI_API_KEY || GEMINI_API_KEY === "PASTE_YOUR_NEW_API_KEY_HERE") {
-  console.error("Missing ❌ GEMINI_API_KEY in .env file, or it's still a placeholder!");
-} else {
-  console.log("Gemini API Key: Loaded ✅");
-}
 
 app.post("/api/crop-advice", async (req, res) => {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === "PASTE_YOUR_NEW_API_KEY_HERE") {
-    return res.status(500).json({ error: "Server is missing a valid API key" });
-  }
+  // We get the prompt, but we won't use it.
+  const { prompt } = req.body;
+  console.log("Received prompt (MOCK):", prompt);
 
   try {
-    const { prompt } = req.body;
+    // --- THIS IS THE NEW MOCK RESPONSE ---
 
-    // This is the correct model name.
-    // Your server is running old code if it mentions 'gemini-1.5-flash'.
+    // 1. This is the fake data we will send back.
+    // It's structured just like a real Gemini response.
+    const mockData = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: "Hello! This is a **test response** from the server. \n\nIf you can see this, it means your frontend and backend are working perfectly! The problem was only with the Google API connection."
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    // 2. We simulate a 1-second network delay to make it feel real.
+    setTimeout(() => {
+      console.log("Sending MOCK response.");
+      res.json(mockData);
+    }, 1000);
+
+
+    // --- OLD GEMINI API CALL (Disabled) ---
+    /*
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(apiUrl, {
@@ -37,7 +57,6 @@ app.post("/api/crop-advice", async (req, res) => {
     });
 
     if (!response.ok) {
-      // This will log the error from Google
       const errorData = await response.json();
       console.error("Gemini API error response:", errorData);
       throw new Error(`API request failed with status ${response.status}`);
@@ -46,6 +65,9 @@ app.post("/api/crop-advice", async (req, res) => {
     const data = await response.json();
     console.log("Gemini API response (Success):", data);
     res.json(data);
+    */
+    // --- END OF OLD CALL ---
+
   } catch (error) {
     console.error("Gemini API error:", error.message);
     res.status(500).json({ error: "Failed to get crop advice" });
