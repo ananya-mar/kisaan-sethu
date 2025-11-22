@@ -16,165 +16,174 @@ const SchemeFinder = () => {
   }, []);
 
   const fetchSchemes = async () => {
-    // Set schemes data immediately
-    const schemesData = [
-      {
-        id: 1,
-        name: 'PM-KISAN Samman Nidhi',
-        category: 'financial',
-        description: 'Direct income support of ₹6,000 per year to small and marginal farmers',
-        eligibility: 'Small and marginal farmers with cultivable land up to 2 hectares',
-        benefits: '₹2,000 every 4 months (₹6,000 annually)',
-        applicationProcess: 'Online application through PM-KISAN portal or CSC centers',
-        status: t('active'),
-        officialUrl: 'https://pmkisan.gov.in/'
-      },
-      {
-        id: 2,
-        name: 'Pradhan Mantri Fasal Bima Yojana',
-        category: 'insurance',
-        description: 'Crop insurance scheme providing financial support to farmers in case of crop failure',
-        eligibility: 'All farmers growing notified crops in notified areas',
-        benefits: 'Insurance coverage for crop losses due to natural calamities',
-        applicationProcess: 'Through banks, insurance companies, or online portal',
-        status: t('active'),
-        officialUrl: 'https://pmfby.gov.in/'
-      },
-      {
-        id: 3,
-        name: 'Soil Health Card Scheme',
-        category: 'technical',
-        description: 'Provides soil health cards to farmers with recommendations for appropriate nutrients',
-        eligibility: 'All farmers across the country',
-        benefits: 'Free soil testing and nutrient recommendations',
-        applicationProcess: 'Contact local agriculture department or soil testing labs',
-        status: t('active'),
-        officialUrl: 'https://soilhealth.dac.gov.in/'
-      },
-      {
-        id: 4,
-        name: 'Kisan Credit Card',
-        category: 'financial',
-        description: 'Credit facility for farmers to meet their agricultural and allied activities',
-        eligibility: 'Farmers with land ownership documents',
-        benefits: 'Easy access to credit at subsidized interest rates',
-        applicationProcess: 'Apply through banks with required documents',
-        status: t('active'),
-        officialUrl: 'https://www.india.gov.in/spotlight/kisan-credit-card-scheme'
-      },
-      {
-        id: 5,
-        name: 'National Mission for Sustainable Agriculture',
-        category: 'technical',
-        description: 'Promotes sustainable agriculture practices and climate resilient farming',
-        eligibility: 'Farmers adopting sustainable farming practices',
-        benefits: 'Technical support and financial assistance for sustainable farming',
-        applicationProcess: 'Through state agriculture departments',
-        status: t('active'),
-        officialUrl: 'https://nmsa.dac.gov.in/'
-      },
-      {
-        id: 6,
-        name: 'Pradhan Mantri Krishi Sinchai Yojana',
-        category: 'technical',
-        description: 'Irrigation scheme to expand cultivated area with assured irrigation and improve water use efficiency',
-        eligibility: 'All farmers, with priority to small and marginal farmers',
-        benefits: 'Subsidies for drip/sprinkler irrigation systems, water harvesting structures',
-        applicationProcess: 'Apply through state irrigation departments or agriculture offices',
-        status: t('active'),
-        officialUrl: 'https://pmksy.gov.in/'
-      },
-      {
-        id: 7,
-        name: 'Sub-Mission on Agricultural Mechanization',
-        category: 'equipment',
-        description: 'Promotes farm mechanization for small and marginal farmers',
-        eligibility: 'Small and marginal farmers, women farmers, SC/ST farmers',
-        benefits: '40-50% subsidy on agricultural machinery and equipment',
-        applicationProcess: 'Apply through state agriculture departments or DBT portal',
-        status: t('active'),
-        officialUrl: 'https://agrimachinery.nic.in/'
-      },
-      {
-        id: 8,
-        name: 'Paramparagat Krishi Vikas Yojana',
-        category: 'technical',
-        description: 'Promotes organic farming and certification of organic produce',
-        eligibility: 'Farmers willing to adopt organic farming practices',
-        benefits: '₹50,000 per hectare over 3 years for organic farming',
-        applicationProcess: 'Through state organic farming agencies',
-        status: t('active'),
-        officialUrl: 'https://pgsindia-ncof.gov.in/'
-      },
-      {
-        id: 9,
-        name: 'National Food Security Mission',
-        category: 'technical',
-        description: 'Increases production and productivity of rice, wheat, pulses, and coarse cereals',
-        eligibility: 'Farmers growing targeted crops in identified districts',
-        benefits: 'Seeds, fertilizers, and technical support at subsidized rates',
-        applicationProcess: 'Through district agriculture offices',
-        status: t('active'),
-        officialUrl: 'https://nfsm.gov.in/'
-      },
-      {
-        id: 10,
-        name: 'Rashtriya Krishi Vikas Yojana',
-        category: 'financial',
-        description: 'State-specific agriculture development programs with flexible funding',
-        eligibility: 'Farmers in participating states',
-        benefits: 'Infrastructure development, technology adoption support',
-        applicationProcess: 'Through state agriculture departments',
-        status: t('active'),
-        officialUrl: 'https://rkvy.nic.in/'
-      },
-      {
-        id: 11,
-        name: 'Interest Subvention Scheme',
-        category: 'financial',
-        description: 'Provides short-term crop loans at subsidized interest rates',
-        eligibility: 'Farmers with Kisan Credit Card or crop loans',
-        benefits: 'Interest rate reduced to 7% per annum, additional 3% subvention for timely repayment',
-        applicationProcess: 'Automatic benefit through banks for eligible loans',
-        status: t('active'),
-        officialUrl: 'https://www.nabard.org/'
-      },
-      {
-        id: 12,
-        name: 'National Horticulture Mission',
-        category: 'technical',
-        description: 'Promotes holistic growth of horticulture sector covering fruits, vegetables, root & tuber crops',
-        eligibility: 'Farmers, entrepreneurs, self-help groups in horticulture',
-        benefits: 'Subsidies for planting material, irrigation, post-harvest infrastructure',
-        applicationProcess: 'Through state horticulture departments',
-        status: t('active'),
-        officialUrl: 'https://nhm.nic.in/'
-      }
-    ];
-
-    setSchemes(schemesData);
-
     try {
-      const response = await fetch('https://builder.empromptu.ai/api_tools/rapid_research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer 78c603dd15a83e48927e7dc52b2a8a6c',
-          'X-Generated-App-ID': 'fb966449-837b-4a1b-b874-1afcdcab3e35',
-          'X-Usage-Key': 'bea07626d89ebd2a9ab76e0ada0b62ad'
+      // Set schemes data immediately (don't wait for API)
+      const schemesData = [
+        {
+          id: 1,
+          name: 'PM-KISAN Samman Nidhi',
+          category: 'financial',
+          description: 'Direct income support of ₹6,000 per year to small and marginal farmers',
+          eligibility: 'Small and marginal farmers with cultivable land up to 2 hectares',
+          benefits: '₹2,000 every 4 months (₹6,000 annually)',
+          applicationProcess: 'Online application through PM-KISAN portal or CSC centers',
+          status: 'Active',
+          officialUrl: 'https://pmkisan.gov.in/'
         },
-        body: JSON.stringify({
-          created_object_name: 'government_schemes',
-          goal: `Find current government schemes and subsidies available for farmers in ${user.location}, India. Include central and state government schemes for agriculture, irrigation, crop insurance, equipment subsidies, organic farming, and rural development. Provide eligibility criteria, application process, and contact information.`
-        })
-      });
+        {
+          id: 2,
+          name: 'Pradhan Mantri Fasal Bima Yojana',
+          category: 'insurance',
+          description: 'Crop insurance scheme providing financial support to farmers in case of crop failure',
+          eligibility: 'All farmers growing notified crops in notified areas',
+          benefits: 'Insurance coverage for crop losses due to natural calamities',
+          applicationProcess: 'Through banks, insurance companies, or online portal',
+          status: 'Active',
+          officialUrl: 'https://pmfby.gov.in/'
+        },
+        {
+          id: 3,
+          name: 'Soil Health Card Scheme',
+          category: 'technical',
+          description: 'Provides soil health cards to farmers with recommendations for appropriate nutrients',
+          eligibility: 'All farmers across the country',
+          benefits: 'Free soil testing and nutrient recommendations',
+          applicationProcess: 'Contact local agriculture department or soil testing labs',
+          status: 'Active',
+          officialUrl: 'https://soilhealth.dac.gov.in/'
+        },
+        {
+          id: 4,
+          name: 'Kisan Credit Card',
+          category: 'financial',
+          description: 'Credit facility for farmers to meet their agricultural and allied activities',
+          eligibility: 'Farmers with land ownership documents',
+          benefits: 'Easy access to credit at subsidized interest rates',
+          applicationProcess: 'Apply through banks with required documents',
+          status: 'Active',
+          officialUrl: 'https://www.india.gov.in/spotlight/kisan-credit-card-scheme'
+        },
+        {
+          id: 5,
+          name: 'National Mission for Sustainable Agriculture',
+          category: 'technical',
+          description: 'Promotes sustainable agriculture practices and climate resilient farming',
+          eligibility: 'Farmers adopting sustainable farming practices',
+          benefits: 'Technical support and financial assistance for sustainable farming',
+          applicationProcess: 'Through state agriculture departments',
+          status: 'Active',
+          officialUrl: 'https://nmsa.dac.gov.in/'
+        },
+        {
+          id: 6,
+          name: 'Pradhan Mantri Krishi Sinchai Yojana',
+          category: 'technical',
+          description: 'Irrigation scheme to expand cultivated area with assured irrigation and improve water use efficiency',
+          eligibility: 'All farmers, with priority to small and marginal farmers',
+          benefits: 'Subsidies for drip/sprinkler irrigation systems, water harvesting structures',
+          applicationProcess: 'Apply through state irrigation departments or agriculture offices',
+          status: 'Active',
+          officialUrl: 'https://pmksy.gov.in/'
+        },
+        {
+          id: 7,
+          name: 'Sub-Mission on Agricultural Mechanization',
+          category: 'equipment',
+          description: 'Promotes farm mechanization for small and marginal farmers',
+          eligibility: 'Small and marginal farmers, women farmers, SC/ST farmers',
+          benefits: '40-50% subsidy on agricultural machinery and equipment',
+          applicationProcess: 'Apply through state agriculture departments or DBT portal',
+          status: 'Active',
+          officialUrl: 'https://agrimachinery.nic.in/'
+        },
+        {
+          id: 8,
+          name: 'Paramparagat Krishi Vikas Yojana',
+          category: 'technical',
+          description: 'Promotes organic farming and certification of organic produce',
+          eligibility: 'Farmers willing to adopt organic farming practices',
+          benefits: '₹50,000 per hectare over 3 years for organic farming',
+          applicationProcess: 'Through state organic farming agencies',
+          status: 'Active',
+          officialUrl: 'https://pgsindia-ncof.gov.in/'
+        },
+        {
+          id: 9,
+          name: 'National Food Security Mission',
+          category: 'technical',
+          description: 'Increases production and productivity of rice, wheat, pulses, and coarse cereals',
+          eligibility: 'Farmers growing targeted crops in identified districts',
+          benefits: 'Seeds, fertilizers, and technical support at subsidized rates',
+          applicationProcess: 'Through district agriculture offices',
+          status: 'Active',
+          officialUrl: 'https://nfsm.gov.in/'
+        },
+        {
+          id: 10,
+          name: 'Rashtriya Krishi Vikas Yojana',
+          category: 'financial',
+          description: 'State-specific agriculture development programs with flexible funding',
+          eligibility: 'Farmers in participating states',
+          benefits: 'Infrastructure development, technology adoption support',
+          applicationProcess: 'Through state agriculture departments',
+          status: 'Active',
+          officialUrl: 'https://rkvy.nic.in/'
+        },
+        {
+          id: 11,
+          name: 'Interest Subvention Scheme',
+          category: 'financial',
+          description: 'Provides short-term crop loans at subsidized interest rates',
+          eligibility: 'Farmers with Kisan Credit Card or crop loans',
+          benefits: 'Interest rate reduced to 7% per annum, additional 3% subvention for timely repayment',
+          applicationProcess: 'Automatic benefit through banks for eligible loans',
+          status: 'Active',
+          officialUrl: 'https://www.nabard.org/'
+        },
+        {
+          id: 12,
+          name: 'National Horticulture Mission',
+          category: 'technical',
+          description: 'Promotes holistic growth of horticulture sector covering fruits, vegetables, root & tuber crops',
+          eligibility: 'Farmers, entrepreneurs, self-help groups in horticulture',
+          benefits: 'Subsidies for planting material, irrigation, post-harvest infrastructure',
+          applicationProcess: 'Through state horticulture departments',
+          status: 'Active',
+          officialUrl: 'https://nhm.nic.in/'
+        }
+      ];
 
-      const data = await response.json();
-      // API response can be used to enhance the existing schemes data if needed
+      // Set schemes immediately
+      setSchemes(schemesData);
+      setLoading(false);
+
+      // Try to fetch additional data from API (non-blocking)
+      try {
+        const response = await fetch('https://builder.empromptu.ai/api_tools/rapid_research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer 78c603dd15a83e48927e7dc52b2a8a6c',
+            'X-Generated-App-ID': 'fb966449-837b-4a1b-b874-1afcdcab3e35',
+            'X-Usage-Key': 'bea07626d89ebd2a9ab76e0ada0b62ad'
+          },
+          body: JSON.stringify({
+            created_object_name: 'government_schemes',
+            goal: `Find current government schemes and subsidies available for farmers in ${user?.location || 'India'}, India. Include central and state government schemes for agriculture, irrigation, crop insurance, equipment subsidies, organic farming, and rural development. Provide eligibility criteria, application process, and contact information.`
+          })
+        });
+
+        const data = await response.json();
+        // API response can be used to enhance the existing schemes data if needed
+        console.log('Additional scheme data fetched:', data);
+      } catch (apiError) {
+        // Silently fail - we already have static data
+        console.log('Optional API call failed (using static data):', apiError.message);
+      }
     } catch (error) {
-      console.error('Error fetching schemes:', error);
+      console.error('Error in fetchSchemes:', error);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const categories = [
@@ -199,7 +208,7 @@ const SchemeFinder = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('governmentSchemesTitle')}</h1>
           <p className="text-gray-600 dark:text-gray-300">
-            {t('findSubsidies')} {user.location}
+            {t('findSubsidies')} {user?.location || 'India'}
           </p>
         </div>
       </div>

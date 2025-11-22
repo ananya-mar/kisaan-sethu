@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sprout, Cloud, TrendingUp, BookOpen, MessageCircle, Languages } from 'lucide-react';
+import { Sprout, Cloud, TrendingUp, BookOpen, MessageCircle, Languages, Navigation } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Profile from './Profile';
@@ -10,11 +10,14 @@ const Dashboard = () => {
   const [weatherData, setWeatherData] = useState(null);
   const [marketData, setMarketData] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [usingLiveLocation, setUsingLiveLocation] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const dropdownRef = useRef();
 
   useEffect(() => {
     if (user?.isProfileComplete) {
-      fetchWeatherData();
+      // Try to get live location first, fallback to profile location
+      getLiveLocation();
       fetchMarketData();
     }
   }, [user]);
@@ -30,48 +33,181 @@ const Dashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchWeatherData = async () => {
+  const getLiveLocation = () => {
+    if (!navigator.geolocation) {
+      console.log('Dashboard: Geolocation is not supported by this browser');
+      // Fallback to profile location
+      if (user?.location) {
+        fetchWeatherDataFromLocation(user.location);
+      } else {
+        setWeatherData({ error: 'Please enable location access or set your location in your profile.' });
+      }
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        console.log('Dashboard: Live location obtained:', { latitude, longitude });
+        setUsingLiveLocation(true);
+        setCurrentLocation({ latitude, longitude });
+        fetchWeatherDataFromCoordinates(latitude, longitude);
+      },
+      (error) => {
+        console.log('Dashboard: Geolocation error:', error);
+        // Fallback to profile location
+        setUsingLiveLocation(false);
+        if (user?.location) {
+          fetchWeatherDataFromLocation(user.location);
+        } else {
+          setWeatherData({ error: 'Unable to get your location. Please enable location access or set your location in your profile.' });
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  const fetchWeatherDataFromCoordinates = async (latitude, longitude) => {
     try {
-      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(user.location || 'Hyderabad')}&count=1&language=en&format=json`;
-      const geoRes = await fetch(geoUrl);
-      if (!geoRes.ok) throw new Error(`Geocoding failed: ${geoRes.status}`);
-
-      const geoJson = await geoRes.json();
-      const place = geoJson?.results?.[0];
-      if (!place) throw new Error('Could not resolve location to coordinates');
-
-      const { latitude, longitude, name: placeName, admin1, country } = place;
-
-      // Updated to use 'current' instead of legacy 'current_weather'
+      // Fetch weather directly using coordinates (no geocoding needed)
       const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
 
+      console.log('Dashboard: Fetching weather data from coordinates:', wxUrl);
       const wxRes = await fetch(wxUrl);
-      if (!wxRes.ok) throw new Error(`Weather fetch failed: ${wxRes.status}`);
+      
+      if (!wxRes.ok) {
+        const errorText = await wxRes.text();
+        console.error('Dashboard: Weather API error response:', errorText);
+        throw new Error(`Weather fetch failed: ${wxRes.status} ${wxRes.statusText}`);
+      }
 
       const wx = await wxRes.json();
+      console.log('Dashboard: Weather data received:', wx);
+
+      // Validate response structure
+      if (!wx.current || !wx.daily) {
+        console.error('Dashboard: Invalid weather response structure:', wx);
+        throw new Error('Invalid weather data format received from API');
+      }
+
+      // Get location name from reverse geocoding
+      let locationLabel = `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      try {
+        const reverseGeoUrl = `https://geocoding-api.open-meteo.com/v1/search?latitude=${latitude}&longitude=${longitude}&count=1&language=en&format=json`;
+        const reverseGeoRes = await fetch(reverseGeoUrl);
+        if (reverseGeoRes.ok) {
+          const reverseGeoJson = await reverseGeoRes.json();
+          if (reverseGeoJson.results && reverseGeoJson.results.length > 0) {
+            const place = reverseGeoJson.results[0];
+            locationLabel = [place.name, place.admin1, place.country].filter(Boolean).join(', ');
+            console.log('Dashboard: Reverse geocoded location:', locationLabel);
+          }
+        }
+      } catch (e) {
+        console.log('Dashboard: Reverse geocoding failed, using coordinates:', e);
+      }
+
+      // Convert wind speed from m/s to km/h (Open-Meteo returns m/s)
+      const windSpeedMs = wx.current.wind_speed_10m ?? 0;
+      const windSpeedKph = windSpeedMs * 3.6; // Convert m/s to km/h
 
       const formatted = {
-        locationLabel: [placeName, admin1, country].filter(Boolean).join(', '),
+        locationLabel: locationLabel,
         current: {
-          // New API structure uses 'current' object
-          temperatureC: wx?.current?.temperature_2m ?? null,
-          windSpeedKph: wx?.current?.wind_speed_10m ?? null,
-          // windDirectionDeg is not in the basic 'current' params requested, can add if needed but keeping simple for now
-          weatherCode: wx?.current?.weather_code ?? null,
-          time: wx?.current?.time ?? null,
+          temperatureC: wx.current.temperature_2m ?? null,
+          windSpeedKph: windSpeedKph,
+          weatherCode: wx.current.weather_code ?? null,
+          time: wx.current.time ?? null,
         },
         daily: {
-          dates: wx?.daily?.time ?? [],
-          maxC: wx?.daily?.temperature_2m_max ?? [],
-          minC: wx?.daily?.temperature_2m_min ?? [],
-          precipitationMm: wx?.daily?.precipitation_sum ?? [],
+          dates: wx.daily.time ?? [],
+          maxC: wx.daily.temperature_2m_max ?? [],
+          minC: wx.daily.temperature_2m_min ?? [],
+          precipitationMm: wx.daily.precipitation_sum ?? [],
         },
       };
 
       setWeatherData(formatted);
     } catch (error) {
-      console.error('Error fetching weather data:', error);
+      console.error('Dashboard: Error fetching weather data:', error);
+      console.error('Dashboard: Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       setWeatherData({ error: error.message || 'Unknown error' });
+    }
+  };
+
+  const fetchWeatherDataFromLocation = async (locationName) => {
+    try {
+      // Clean up location string - remove extra commas, trim whitespace
+      const cleanLocation = locationName.split(',').map(s => s.trim()).filter(Boolean).join(', ');
+      
+      // Step 1: geocode location to lat/long
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+        cleanLocation || 'Hyderabad'
+      )}&count=1&language=en&format=json`;
+
+      console.log('Dashboard: Fetching geo data from:', geoUrl);
+      const geoRes = await fetch(geoUrl);
+      
+      if (!geoRes.ok) {
+        const errorText = await geoRes.text();
+        console.error('Dashboard: Geocoding API error response:', errorText);
+        throw new Error(`Geocoding failed: ${geoRes.status} ${geoRes.statusText}`);
+      }
+
+      const geoJson = await geoRes.json();
+      console.log('Dashboard: Geocoding response:', geoJson);
+      
+      if (!geoJson.results || geoJson.results.length === 0) {
+        // Try with just the first part of the location (before comma)
+        const firstPart = cleanLocation.split(',')[0].trim();
+        if (firstPart !== cleanLocation) {
+          console.log('Dashboard: Trying with simplified location:', firstPart);
+          const retryGeoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(firstPart)}&count=1&language=en&format=json`;
+          const retryGeoRes = await fetch(retryGeoUrl);
+          if (retryGeoRes.ok) {
+            const retryGeoJson = await retryGeoRes.json();
+            if (retryGeoJson.results && retryGeoJson.results.length > 0) {
+              const place = retryGeoJson.results[0];
+              const { latitude, longitude } = place;
+              return fetchWeatherDataFromCoordinates(latitude, longitude);
+            }
+          }
+        }
+        throw new Error(`Could not resolve location "${cleanLocation}" to coordinates. Please try using your current location.`);
+      }
+
+      const place = geoJson.results[0];
+      const { latitude, longitude } = place;
+      console.log('Dashboard: Resolved location:', { name: place.name, latitude, longitude });
+
+      // Fetch weather using coordinates
+      await fetchWeatherDataFromCoordinates(latitude, longitude);
+    } catch (error) {
+      console.error('Dashboard: Error fetching weather data:', error);
+      console.error('Dashboard: Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      setWeatherData({ error: error.message || 'Unknown error' });
+    }
+  };
+
+  const fetchWeatherData = () => {
+    if (usingLiveLocation && currentLocation) {
+      fetchWeatherDataFromCoordinates(currentLocation.latitude, currentLocation.longitude);
+    } else if (user?.location) {
+      fetchWeatherDataFromLocation(user.location);
+    } else {
+      getLiveLocation();
     }
   };
 
@@ -187,9 +323,22 @@ const Dashboard = () => {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Weather Card */}
         <div className="card">
-          <div className="flex items-center mb-4">
-            <Cloud className="h-6 w-6 text-blue-500 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('weatherUpdate')}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Cloud className="h-6 w-6 text-blue-500 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('weatherUpdate')}</h2>
+              {usingLiveLocation && (
+                <Navigation className="h-4 w-4 text-green-500 ml-2" title="Using current location" />
+              )}
+            </div>
+            <button
+              onClick={getLiveLocation}
+              className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-1"
+              title="Use current location"
+            >
+              <Navigation className="h-3 w-3" />
+              Live
+            </button>
           </div>
           {weatherData ? (
             weatherData.error ? (

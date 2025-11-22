@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import getMandiPrices from "./server/scrapers/mandiScraper.js";
 
 dotenv.config();
 
@@ -16,6 +17,13 @@ if (!GEMINI_API_KEY || GEMINI_API_KEY === "PASTE_YOUR_NEW_API_KEY_HERE") {
 } else {
   console.log("Gemini API Key: Loaded ✅");
 }
+
+// Cache for mandi prices (1-2 hours)
+let mandiPricesCache = {
+  data: null,
+  timestamp: null,
+  CACHE_DURATION: 2 * 60 * 60 * 1000 // 2 hours in milliseconds
+};
 
 app.post("/api/crop-advice", async (req, res) => {
   if (!GEMINI_API_KEY || GEMINI_API_KEY === "PASTE_YOUR_NEW_API_KEY_HERE") {
@@ -52,8 +60,103 @@ app.post("/api/crop-advice", async (req, res) => {
   }
 });
 
+// Live Mandi Prices API Endpoint
+app.get("/api/live-mandi-prices", async (req, res) => {
+  try {
+    const now = Date.now();
+    
+    // Check if cache is valid
+    if (
+      mandiPricesCache.data &&
+      mandiPricesCache.timestamp &&
+      (now - mandiPricesCache.timestamp) < mandiPricesCache.CACHE_DURATION
+    ) {
+      console.log("✅ Returning cached mandi prices");
+      return res.json({
+        success: true,
+        data: mandiPricesCache.data,
+        cached: true,
+        timestamp: new Date(mandiPricesCache.timestamp).toISOString()
+      });
+    }
+
+    // Cache expired or doesn't exist - fetch fresh data
+    console.log("🔄 Fetching fresh mandi prices from scraper...");
+    const prices = await getMandiPrices();
+
+    if (!prices || prices.length === 0) {
+      // If scraping fails but we have old cache, return it
+      if (mandiPricesCache.data) {
+        console.log("⚠️ Scraping failed, returning stale cache");
+        return res.json({
+          success: true,
+          data: mandiPricesCache.data,
+          cached: true,
+          stale: true,
+          timestamp: new Date(mandiPricesCache.timestamp).toISOString(),
+          message: "Using cached data - live data unavailable"
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch mandi prices. Please try again later."
+      });
+    }
+
+    // Update cache
+    mandiPricesCache.data = prices;
+    mandiPricesCache.timestamp = now;
+
+    console.log(`✅ Fetched ${prices.length} mandi price records`);
+    res.json({
+      success: true,
+      data: prices,
+      cached: false,
+      timestamp: new Date(now).toISOString()
+    });
+
+  } catch (error) {
+    console.error("Error in /api/live-mandi-prices:", error);
+    
+    // Return cached data if available, even if stale
+    if (mandiPricesCache.data) {
+      console.log("⚠️ Error occurred, returning stale cache");
+      return res.json({
+        success: true,
+        data: mandiPricesCache.data,
+        cached: true,
+        stale: true,
+        timestamp: new Date(mandiPricesCache.timestamp).toISOString(),
+        message: "Using cached data due to error"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Live data unavailable — please try again later.",
+      details: error.message
+    });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`✅ Server running on http://localhost:${PORT}`)
-);
+app.listen(PORT, async () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`📊 Mandi prices API: http://localhost:${PORT}/api/live-mandi-prices`);
+  
+  // Optional: Start cron scheduler for automatic refresh
+  // Uncomment the lines below to enable automatic refresh every 2 hours
+  // To enable, remove the /* and */ comment markers and uncomment the try block
+  /*
+  try {
+    const { startCronScheduler } = await import('./server/scrapers/cronScheduler.js');
+    // Every 2 hours - schedule format: minute hour day month weekday
+    const cronSchedule = '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'; // Every 2 hours
+    startCronScheduler(cronSchedule);
+  } catch (err) {
+    console.log('⚠️  Cron scheduler not available:', err.message);
+  }
+  */
+});
 
