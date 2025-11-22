@@ -14,8 +14,10 @@ const Weather = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchWeatherData();
-  }, [user.location]);
+    if (user?.location) {
+      fetchWeatherData();
+    }
+  }, [user?.location]);
 
   const WeatherIcon = ({ condition, ...props }) => {
     if (!condition) return <Cloud className="text-gray-400" {...props} />;
@@ -32,30 +34,40 @@ const Weather = () => {
     setError(null);
     try {
       // Step 1: geocode location to lat/long
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-          user.location || 'Hyderabad'
-        )}&count=1&language=en&format=json`
-      );
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+        user.location || 'Hyderabad'
+      )}&count=1&language=en&format=json`;
+
+      console.log('Fetching geo data from:', geoUrl);
+      const geoRes = await fetch(geoUrl);
+      if (!geoRes.ok) throw new Error(`Geocoding failed: ${geoRes.status}`);
+
       const geoJson = await geoRes.json();
       const place = geoJson?.results?.[0];
       if (!place) throw new Error('Could not resolve location to coordinates');
 
       const { latitude, longitude, name: placeName, admin1, country } = place;
+      console.log('Resolved location:', { placeName, latitude, longitude });
 
       // Step 2: fetch forecast
-      const wxRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
-      );
+      // Updated to use 'current' instead of legacy 'current_weather'
+      const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
+
+      console.log('Fetching weather data from:', wxUrl);
+      const wxRes = await fetch(wxUrl);
+      if (!wxRes.ok) throw new Error(`Weather fetch failed: ${wxRes.status}`);
+
       const wx = await wxRes.json();
+      console.log('Weather data received:', wx);
 
       const formatted = {
         locationLabel: [placeName, admin1, country].filter(Boolean).join(', '),
         current: {
-          temperatureC: wx?.current_weather?.temperature ?? null,
-          windSpeedKph: wx?.current_weather?.windspeed ?? null,
-          weatherCode: wx?.current_weather?.weathercode ?? null,
-          time: wx?.current_weather?.time ?? null,
+          // New API structure uses 'current' object
+          temperatureC: wx?.current?.temperature_2m ?? null,
+          windSpeedKph: wx?.current?.wind_speed_10m ?? null,
+          weatherCode: wx?.current?.weather_code ?? null,
+          time: wx?.current?.time ?? null,
         },
         daily: {
           dates: wx?.daily?.time ?? [],
@@ -68,7 +80,7 @@ const Weather = () => {
       setWeatherData(formatted);
     } catch (err) {
       console.error('Error fetching weather data:', err);
-      setError(t('unableToLoad'));
+      setError(err.message || t('unableToLoad'));
     }
     setLoading(false);
   };

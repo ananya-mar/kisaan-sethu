@@ -32,28 +32,33 @@ const Dashboard = () => {
 
   const fetchWeatherData = async () => {
     try {
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(user.location || 'Hyderabad')}&count=1&language=en&format=json`
-      );
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(user.location || 'Hyderabad')}&count=1&language=en&format=json`;
+      const geoRes = await fetch(geoUrl);
+      if (!geoRes.ok) throw new Error(`Geocoding failed: ${geoRes.status}`);
+
       const geoJson = await geoRes.json();
       const place = geoJson?.results?.[0];
       if (!place) throw new Error('Could not resolve location to coordinates');
 
       const { latitude, longitude, name: placeName, admin1, country } = place;
 
-      const wxRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
-      );
+      // Updated to use 'current' instead of legacy 'current_weather'
+      const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
+
+      const wxRes = await fetch(wxUrl);
+      if (!wxRes.ok) throw new Error(`Weather fetch failed: ${wxRes.status}`);
+
       const wx = await wxRes.json();
 
       const formatted = {
         locationLabel: [placeName, admin1, country].filter(Boolean).join(', '),
         current: {
-          temperatureC: wx?.current_weather?.temperature ?? null,
-          windSpeedKph: wx?.current_weather?.windspeed ?? null,
-          windDirectionDeg: wx?.current_weather?.winddirection ?? null,
-          weatherCode: wx?.current_weather?.weathercode ?? null,
-          time: wx?.current_weather?.time ?? null,
+          // New API structure uses 'current' object
+          temperatureC: wx?.current?.temperature_2m ?? null,
+          windSpeedKph: wx?.current?.wind_speed_10m ?? null,
+          // windDirectionDeg is not in the basic 'current' params requested, can add if needed but keeping simple for now
+          weatherCode: wx?.current?.weather_code ?? null,
+          time: wx?.current?.time ?? null,
         },
         daily: {
           dates: wx?.daily?.time ?? [],
@@ -66,7 +71,7 @@ const Dashboard = () => {
       setWeatherData(formatted);
     } catch (error) {
       console.error('Error fetching weather data:', error);
-      setWeatherData({ error: true });
+      setWeatherData({ error: error.message || 'Unknown error' });
     }
   };
 
@@ -154,9 +159,8 @@ const Dashboard = () => {
                   <button
                     key={lang.code}
                     onClick={() => { setLanguage(lang.code); setDropdownOpen(false); }}
-                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                      lang.code === language ? 'font-semibold bg-gray-200 dark:bg-gray-700' : ''
-                    }`}
+                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${lang.code === language ? 'font-semibold bg-gray-200 dark:bg-gray-700' : ''
+                      }`}
                   >
                     {lang.label}
                   </button>
@@ -190,7 +194,7 @@ const Dashboard = () => {
           {weatherData ? (
             weatherData.error ? (
               <div className="text-sm text-red-600 dark:text-red-400">
-                Failed to load weather. Please try again later.
+                Failed to load weather: {weatherData.error}
               </div>
             ) : (
               <div className="text-sm text-gray-700 dark:text-gray-200">
